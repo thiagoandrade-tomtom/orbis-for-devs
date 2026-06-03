@@ -169,9 +169,13 @@ function LeftContent({ visible, theme }: { visible: boolean; theme: Theme }) {
   return (
     <div className={`left-content ${visible ? "is-visible" : "is-hidden"}`}>
       <TomTomLogo theme={theme} />
+      {/* Two non-breaking spans split by a hard <br> so the heading
+          ALWAYS renders as exactly two lines. Without the spans, narrow
+          columns could push "Easy to build with." to a third line. */}
       <h1 className="heading">
-        Hard to beat.<br />
-        Easy to build with.
+        <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>Hard to beat.</span>
+        <br />
+        <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>Easy to build with.</span>
       </h1>
       <p className="body">
         TomTom gives developers everything they need to build with location —

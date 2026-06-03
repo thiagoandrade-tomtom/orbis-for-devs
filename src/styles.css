@@ -704,8 +704,10 @@ body {
      centred title above it. */
   margin: clamp(16px, 1.8vh, 24px) auto 0;
   font-family: var(--f-body);
-  /* 1.25× bumped — 19px at 1024, 22px at 1920. */
-  font-size: clamp(19px, 1.2vw, 22px);
+  /* Same scale as the idle hero .body — 16px at 1024, 20px at 1920.
+     Keeps the two descriptive paragraphs (idle + zoom) consistent
+     in weight on screen. */
+  font-size: clamp(16px, 1.05vw, 20px);
   line-height: 1.6;
   color: var(--t-med);
   max-width: min(900px, 75%);
@@ -935,8 +937,30 @@ body {
    as the Return pill, title and zoom-header so everything aligns. */
 
 @media (max-width: 900px) {
-  .zoom-scene { padding: 96px 32px; }
+  /* Use the page-pad token here so a mobile override below cascades
+     cleanly into the zoom scene's side padding. */
+  .zoom-scene { padding: 96px var(--page-pad-x); }
   .zoom-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Mobile — shrink the page edge padding so the internal screen's
+   title, lede, and carousel get more room. Cascades through every
+   element that anchors to --page-pad-x: zoom-scene padding, return
+   pill, theme toggle, carousel body negative margin, etc. */
+@media (max-width: 680px) {
+  .concept-orbit { --page-pad-x: 20px; }
+  /* Drop the desktop's 75% width cap on mobile — the page-pad-x is
+     already the only inset we need; an extra % cap just adds dead
+     space on both sides of the lede. */
+  .zoom-lede { max-width: 100%; }
+  /* Step the CTAs and Return pill down from Large → Medium so the
+     two CTAs comfortably fit side-by-side at 375px-wide viewports.
+     Matches the design-system Medium button size. */
+  .cta,
+  .return-pill {
+    padding: 12px 20px;
+    font-size: 14px;
+    gap: 8px;
+  }
 }
 /* Horizontal carousel kicks in when the cards would NOT fit vertically
    alongside the header + fixed CTAs. Two triggers:
@@ -987,9 +1011,13 @@ body {
     --globe-r: 55vmin;
   }
   .left-content {
-    top: clamp(24px, 4vh, 56px);
-    left: clamp(16px, 4vw, 40px);
-    right: clamp(16px, 4vw, 40px);
+    /* Logo (19px tall) is vertically CENTRED against the theme toggle
+       (34px tall) on the right — so we push the left-content top down
+       by half the height difference. (34 - 19) / 2 = 7.5px. Keeps the
+       two visually balanced across the top bar. */
+    top: calc(var(--page-pad-y) + 7.5px);
+    left: var(--page-pad-x);
+    right: var(--page-pad-x);
     width: auto;
     max-width: none;
     transform: none;
