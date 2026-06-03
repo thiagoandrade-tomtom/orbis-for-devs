@@ -113,7 +113,14 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #root { min-height: 100%; margin: 0; }
+html, body, #root {
+  min-height: 100%;
+  margin: 0;
+  /* Dark page background under everything so iOS Safari's elastic
+     overscroll doesn't reveal a flash of default white. The actual
+     theme surface is painted on .concept-orbit on top of this. */
+  background-color: #0C0C12;
+}
 body {
   font-family: var(--f-body);
   -webkit-font-smoothing: antialiased;
@@ -122,6 +129,9 @@ body {
      fit; the scene clips orbits/globe to its own bounds via overflow:hidden. */
   overflow-x: hidden;
   overflow-y: auto;
+  /* Suppress the iOS rubber-band bounce — without this, scrolling past
+     the top edge exposes the html background underneath. */
+  overscroll-behavior-y: none;
 }
 
 /* ── Theme surfaces ──────────────────────────────────────────────── */
@@ -1092,8 +1102,11 @@ body {
     transform: none;
   }
   .left-content.is-hidden { transform: translateY(-8px); }
-  .heading { margin-top: 40px; font-size: clamp(36px, 7.5vw, 60px); }
-  .body { max-width: none; font-size: 20px; }
+  /* Hero typography aligned with the internal-screen scale so the
+     idle and zoom views feel like one system. Same slope/floors as
+     .zoom-title and .zoom-lede on mobile. */
+  .heading { margin-top: 40px; font-size: clamp(36px, 3.75vw, 60px); }
+  .body { max-width: none; font-size: 16px; }
   .idle-vignette {
     /* Top-to-bottom fade so text is readable above the globe. */
     background: linear-gradient(180deg,
