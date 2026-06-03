@@ -1,3 +1,72 @@
+/* ── Self-hosted brand fonts ──────────────────────────────────────── */
+/* Gilroy (headings, buttons) — 600 Semibold + 700 Bold */
+@font-face {
+  font-family: 'Gilroy';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/Gilroy-Semibold.woff2') format('woff2'),
+       url('./fonts/Gilroy-Semibold.woff')  format('woff');
+}
+@font-face {
+  font-family: 'Gilroy';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/Gilroy-Bold.woff2') format('woff2'),
+       url('./fonts/Gilroy-Bold.woff')  format('woff');
+}
+
+/* Proxima Nova (body) — 400 / 600 / 700, regular + italic */
+@font-face {
+  font-family: 'Proxima Nova';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/ProximaNova-Regular.woff2') format('woff2'),
+       url('./fonts/ProximaNova-Regular.woff')  format('woff');
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/ProximaNova-RegularIt.woff2') format('woff2'),
+       url('./fonts/ProximaNova-RegularIt.woff')  format('woff');
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/ProximaNova-Semibold.woff2') format('woff2'),
+       url('./fonts/ProximaNova-Semibold.woff')  format('woff');
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/ProximaNova-SemiboldIt.woff2') format('woff2'),
+       url('./fonts/ProximaNova-SemiboldIt.woff')  format('woff');
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/ProximaNova-Bold.woff2') format('woff2'),
+       url('./fonts/ProximaNova-Bold.woff')  format('woff');
+}
+@font-face {
+  font-family: 'Proxima Nova';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/ProximaNova-BoldIt.woff2') format('woff2'),
+       url('./fonts/ProximaNova-BoldIt.woff')  format('woff');
+}
+
 /* Concept Orbit — built against the TomTom Orbis design system tokens. */
 
 :root {
