@@ -1,0 +1,1008 @@
+/* Concept Orbit — built against the TomTom Orbis design system tokens. */
+
+:root {
+  /* Brand & semantic palette ────────────────────────────── */
+  --brand:          #DF1B12;
+
+  /* Map / data tone palette (light variant defaults).
+     Dark variants are swapped under [data-theme="dark"] below. */
+  --c-positive:     #4CA262;
+  --c-attention:    #DBA43A;
+  --c-negative:     #EE6748;
+  --c-neutral:      #3F72B0;
+  --c-general:      #646E7B;
+  --c-alternative:  #6443A1;
+
+  /* Typography ──────────────────────────────────────────── */
+  --f-title: 'Gilroy', 'Nunito', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --f-body:  'Proxima Nova', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+  --f-code:  'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radius ──────────────────────────────────────────────── */
+  --r-sm:   5px;
+  --r-md:   10px;
+  --r-lg:   20px;
+  --r-xl:   40px;
+  --r-pill: 999px;
+
+  /* Page edge padding — single source of truth shared by every element
+     that anchors to a viewport edge (return pill, theme toggle, CTAs,
+     hero block, internal-screen content). Every value resolves to a
+     multiple of 4 so the whole layout snaps to a 4px grid. Bumped
+     1.25× vs the original spec to match what the design felt like
+     under 125% browser zoom. */
+  --page-pad-x: clamp(48px, 8vw, 140px);
+  --page-pad-y: clamp(40px, 4.5vh, 72px);
+
+  /* Elevation (soft contact shadows, desaturated near-black so they
+     survive on dark surfaces too — per §6 of the design system). */
+  --e1: 0 1px  3px -1px rgba(17,12,34,.08);
+  --e2: 0 4px  10px -4px rgba(17,12,34,.10);
+  --e3: 0 8px  20px -8px rgba(17,12,34,.10);
+  --e4: 0 16px 28px -10px rgba(17,12,34,.12);
+  --e5: 0 24px 48px -16px rgba(17,12,34,.14);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; margin: 0; }
+body {
+  font-family: var(--f-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Allow the page to scroll on small viewports where content doesn't
+     fit; the scene clips orbits/globe to its own bounds via overflow:hidden. */
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── Theme surfaces ──────────────────────────────────────────────── */
+.concept-orbit {
+  position: relative;
+  width: 100%;
+  /* Use dvh so mobile browser chrome doesn't crop the scene. */
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  /* Globe anchor — flips per breakpoint via media queries below. The
+     orbits wrapper, MapLibre container, the wireframe canvas, and chip
+     positions all read these so they move together. Anchor at 100vw
+     puts the globe centre exactly on the viewport's right edge (the
+     "CROP" line from the layout spec), so only the left half of the
+     sphere is visible and the heading sits vertically on the globe's
+     equator. */
+  --globe-cx: 100vw;
+  --globe-cy: 50vh;
+  /* Globe radius — SINGLE source of truth. Wireframe canvas R, MapLibre
+     sphere target, the .globe-map container and the orbit rings all
+     derive from this. Pure vmin (no pixel clamp) so they scale at the
+     same rate on every resize. */
+  --globe-r: 50vmin;
+  color: var(--t-hi);
+  font-family: var(--f-body);
+
+  /* Light theme (default) ─────────────────────────────── */
+  --s0:    #FFFFFF;
+  --s1:    #F2F2F2;
+  --s2:    #E5E5E5;
+  --s3:    #CCCCCC;
+  --s-hi:  #333333;
+
+  --t-hi:  #000000;
+  --t-med: #5C5C5C;
+  --t-lo:  #959595;
+  --t-dis: #B2B2B2;
+  --t-wh:  #FFFFFF;
+
+  --b-base: #F2F2F2;
+  --b-lo:   #E5E5E5;
+  --b-med:  #CCCCCC;
+  --b-hi:   #B2B2B2;
+
+  /* Real-globe sky colours — read by MapLibre setSky in the GlobeMap. */
+  --map-space-deep:    #D8E4EF;
+  --map-space-horizon: #7BA8D4;
+
+  /* Chip pill colours: inverted from the surrounding theme.
+     Light theme → dark pill on light bg. */
+  --chip-bg: #0C0C12;
+  --chip-fg: #FFFFFF;
+
+  background: var(--s0);
+}
+
+.concept-orbit[data-theme="dark"] {
+  --s0:    #0C0C12;
+  --s1:    #16161E;
+  --s2:    #292930;
+  --s3:    #41414B;
+  --s-hi:  #FFFFFF;
+
+  --t-hi:  #FFFFFF;
+  --t-med: rgba(255,255,255,0.72);
+  --t-lo:  rgba(255,255,255,0.48);
+  --t-dis: rgba(255,255,255,0.32);
+  --t-wh:  #FFFFFF;
+
+  --b-base: rgba(255,255,255,0.08);
+  --b-lo:   rgba(255,255,255,0.16);
+  --b-med:  rgba(255,255,255,0.24);
+  --b-hi:   rgba(255,255,255,0.32);
+
+  /* Dark tone variants (per design system §5).
+     Note: APIs (--c-neutral) keeps the same blue in both themes per
+     product request — the design-system teal didn't read as a
+     coherent "API" colour on the dark surface. */
+  --c-positive:    #A5C94E;
+  --c-attention:   #EDC15D;
+  --c-negative:    #EE6748;
+  --c-neutral:     #3F72B0;
+  --c-general:     #9AA3B0;
+  --c-alternative: #AF79BE;
+
+  /* Dark-mode sky for the real globe. */
+  --map-space-deep:    #0C1422;
+  --map-space-horizon: #3A6BA3;
+
+  /* Dark theme → light pill on dark bg (inverse of light theme). */
+  --chip-bg: #FFFFFF;
+  --chip-fg: #0C0C12;
+
+  background: var(--s0);
+}
+
+/* Tone classes expose the layer color via currentColor AND a stable
+   --tone-color var that child elements can use without inheritance loss. */
+.tone-negative    { color: var(--c-negative);    --tone-color: var(--c-negative);    }
+.tone-neutral     { color: var(--c-neutral);     --tone-color: var(--c-neutral);     }
+.tone-positive    { color: var(--c-positive);    --tone-color: var(--c-positive);    }
+.tone-alternative { color: var(--c-alternative); --tone-color: var(--c-alternative); }
+
+/* ── Left content ────────────────────────────────────────────────── */
+/* Left half owns the hero — content block starts at 6.3% and spans
+   to ~48% of the viewport so the text genuinely fills its half. */
+.left-content {
+  position: absolute;
+  top: 50%;
+  left: var(--page-pad-x);
+  transform: translateY(-50%);
+  /* Hero lives in the LEFT block (left half of the viewport). Column
+     width caps at 40vw so it never reaches the outermost orbit chip,
+     which lives in the RIGHT block. At 1920: 40vw = 768, capped at
+     520px → heading right ≈ 628px, MCP chip ≈ 928px, ~300px gap. */
+  width: min(520px, 40vw);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  transition: opacity .5s ease, transform .5s ease;
+}
+.left-content.is-hidden {
+  opacity: 0;
+  transform: translateY(calc(-50% - 8px));
+  pointer-events: none;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.left-content.is-visible .logo    { animation: fadeSlideUp .55s ease both .06s; }
+.left-content.is-visible .heading { animation: fadeSlideUp .60s ease both .18s; }
+.left-content.is-visible .body    { animation: fadeSlideUp .55s ease both .30s; }
+
+.logo {
+  display: block;
+  width: 96px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.heading {
+  margin: 40px 0 28px;
+  font-family: var(--f-title);
+  font-weight: 700;
+  /* 1.25× bumped to match the 125%-zoom feel. */
+  font-size: clamp(40px, 4.4vw, 72px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--t-hi);
+}
+
+.body {
+  margin: 0;
+  font-family: var(--f-body);
+  /* 1.25× bumped — 16px at 1024, 20px at 1920. */
+  font-size: clamp(16px, 1.05vw, 20px);
+  line-height: 1.6;
+  color: var(--t-med);
+  max-width: 100%;
+}
+
+/* ── Idle scene ──────────────────────────────────────────────────── */
+.idle-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transition: opacity .5s cubic-bezier(.4,0,.2,1), transform .5s cubic-bezier(.4,0,.2,1);
+}
+.concept-orbit[data-view="zoom"] .idle-scene {
+  opacity: 0;
+  transform: scale(1.02);
+  pointer-events: none;
+}
+
+/* Left-edge atmospheric depth — frames the hero content */
+.idle-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(100deg,
+      var(--s0) 0%,
+      color-mix(in srgb, var(--s0) 92%, transparent) 22%,
+      color-mix(in srgb, var(--s0) 60%, transparent) 38%,
+      transparent 56%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── Real globe (TomTom Orbis basemap) ───────────────────────────── */
+/* Square container anchored so its centre sits on the viewport's right
+   edge — MapLibre then renders an actual sphere inside it, with half
+   the globe falling offscreen by virtue of the container's position
+   (NOT clip-path). Atmosphere glow is painted by setSky and extends
+   beyond the sphere into the visible area. */
+/* Container is 120vmin square, centred on the viewport's right edge.
+   At zoom 0 MapLibre paints the globe sphere at ~63% of the smaller
+   canvas dim, so 120vmin × 0.63 ≈ 76vmin diameter — matches the
+   wireframe disc (radius 38vmin). The 60vmin offset puts the sphere
+   centre exactly on the right edge. */
+.globe-map {
+  position: absolute;
+  /* Container is 2.4× the globe radius so the sphere has room to render
+     at full size without clipping at any zoom level we hit. */
+  left: calc(var(--globe-cx) - var(--globe-r) * 1.2);
+  top:  calc(var(--globe-cy) - var(--globe-r) * 1.2);
+  width:  calc(var(--globe-r) * 2.4);
+  height: calc(var(--globe-r) * 2.4);
+  z-index: 0;
+  pointer-events: none;
+  /* Mute the surface so the wireframe stays dominant; keep the sphere
+     shading + atmosphere though, which is what gives the depth. */
+  opacity: 0.90;
+  filter: saturate(0.80);
+}
+.concept-orbit[data-theme="dark"] .globe-map {
+  opacity: 0.85;
+  filter: saturate(0.75) contrast(1.05);
+}
+
+/* MapLibre injects its own canvas + control container inside .globe-map.
+   Strip its attribution chrome (we don't have room for it here). */
+.globe-map .maplibregl-control-container,
+.globe-map .maplibregl-ctrl-attrib { display: none !important; }
+.globe-map .maplibregl-canvas { outline: none; }
+
+/* ── Wireframe globe canvas ──────────────────────────────────────── */
+/* No blend-mode — the wireframe always overlays the dark Orbis globe
+   (we force standardDark regardless of theme), so a plain light-stroked
+   graticule reads cleanly without blend-mode tricks. */
+.globe-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Concentric orbit rings ──────────────────────────────────────── */
+/* The wrapper is a square (108vmin) anchored so its centre lands at the
+   offscreen-right globe centre. The inner SVG draws circles in -100..100
+   coordinates; r is set in the same scale (radius is in viewBox units
+   where 100 = half the SVG side = 54vmin). */
+.orbits-wrap {
+  position: absolute;
+  /* Anchor follows --globe-cx / --globe-cy. Wrapper sized for the
+     outermost orbit (88vmin) with headroom — SVG viewBox is -100..100. */
+  left: calc(var(--globe-cx) - 100vmin);
+  top:  calc(var(--globe-cy) - 100vmin);
+  width: 200vmin;
+  height: 200vmin;
+  /* Wrapper lets pointer events through to the SVG; only .orbit-hit
+     elements actually capture them. */
+  pointer-events: none;
+  z-index: 2;
+}
+.orbits-wrap svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.orbits-wrap svg .orbit-hit { pointer-events: stroke; }
+.orbit-ring {
+  fill: none;
+  stroke: currentColor;
+  /* IMPORTANT — no vector-effect: non-scaling-stroke. With non-scaling
+     stroke + rotation, Chrome cannot cache the stroke as a rasterised
+     layer (dashes are in screen space, so each rotation frame needs
+     fresh dash positions). Removing it lets the layer rasterise once
+     and the rotation becomes a cheap transform on the cached bitmap.
+     Stroke + dash are in viewBox units (1 unit = 1vmin); the Figma
+     values 15px / 30px / 640px translate to ~1.5 / 3 / 64 viewBox
+     units at typical viewports. */
+  stroke-width: 1.5;
+  stroke-dasharray: 0.2 0.4;
+  stroke-linecap: butt;
+  opacity: 0;
+  transform-origin: 0 0;
+  /* Promote each orbit to its own GPU compositing layer so Chrome
+     doesn't re-rasterise ~800 dashes per orbit on every animation
+     frame. Without this, non-scaling-stroke + rotation + dense dashes
+     causes visible flicker in Chrome. */
+  will-change: transform;
+  /* Initial fade-in; per-tone rules below add a perpetual spin. */
+  animation: orbitDraw 1.6s cubic-bezier(.22,.61,.36,1) forwards;
+  /* Stroke-width is intentionally NOT transitioned — animating it 15→55px
+     over 0.3s would force Chrome to re-rasterise ~800 dashes at every
+     intermediate width for ~18 frames per hover, which accumulates into
+     severe flicker after a handful of hovers. Snap the width instead. */
+  transition: opacity .3s ease;
+}
+/* Hover stroke — viewBox units (≈30px at vmin=1000). The 80px-equivalent
+   hit ring still contains it with margin. */
+.orbit-ring.is-active {
+  stroke-width: 3;
+}
+@keyframes orbitDraw {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Spin keyframes intentionally unused — see .orbit-ring rules above
+   for why rotation is disabled. Kept defined so they're easy to
+   re-enable for experiments. */
+@keyframes orbitSpin     { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+@keyframes orbitSpinRev  { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+
+/* Per-orbit speeds — slow, Kepler-ish: outer rings spin slowest, and we
+   alternate direction for a more organic feel. Linear keeps the motion
+   even — it's the slow tempo that makes it feel calm. Safe now that the
+   hit ring is wide enough to stop the hover/unhover flicker loop. */
+.orbit-ring.tone-negative    { animation: orbitDraw 1.6s cubic-bezier(.22,.61,.36,1) forwards, orbitSpin    110s linear 1.6s infinite; }
+.orbit-ring.tone-neutral     { animation: orbitDraw 1.6s cubic-bezier(.22,.61,.36,1) forwards, orbitSpinRev 150s linear 1.6s infinite; }
+.orbit-ring.tone-positive    { animation: orbitDraw 1.6s cubic-bezier(.22,.61,.36,1) forwards, orbitSpin    195s linear 1.6s infinite; }
+.orbit-ring.tone-alternative { animation: orbitDraw 1.6s cubic-bezier(.22,.61,.36,1) forwards, orbitSpinRev 240s linear 1.6s infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring.tone-negative,
+  .orbit-ring.tone-neutral,
+  .orbit-ring.tone-positive,
+  .orbit-ring.tone-alternative {
+    animation: orbitDraw 1.6s ease forwards;
+  }
+}
+
+/* Invisible wider stroke layered on each orbit — picks up hover/click
+   even though the visible ring is thin. pointer-events:stroke ensures
+   only the line responds (not the area inside it).
+
+   Stroke-width MUST exceed the hover-state stroke of .orbit-ring (55px)
+   with margin. Otherwise the visible ring on hover is wider than the
+   hit zone, the cursor lands in the gap, mouseleave fires, the ring
+   shrinks back, the cursor is over the visual ring again, mouseenter
+   fires — and you get a tight hover/unhover flicker loop. 80px gives
+   a ~12.5px slack on each side. */
+.orbit-hit {
+  fill: none;
+  stroke: transparent;
+  /* viewBox units — 8 units ≈ 80px at vmin=1000, exceeds the 3-unit
+     hover stroke with ~25 units of slack on each side. */
+  stroke-width: 8;
+  pointer-events: stroke;
+  cursor: pointer;
+  outline: none;
+}
+.orbit-hit:focus-visible {
+  stroke: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* Increase stroke-width when SVG is scaled — we set vector-effect, but
+   make the dash pattern read at any viewport scale. */
+
+/* ── Chips (satellite + label tag) ───────────────────────────────── */
+.chips {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.chip {
+  position: absolute;
+  /* The (left, top) coord is the orbit point.
+     We translate so the .chip-dot's centre lands on that point:
+       -50% horizontally (centre the column)
+       -100% + 6px vertically (chip's bottom = orbit + 6px; the dot is
+       12px tall so its centre is 6px above its bottom, i.e. on the orbit). */
+  transform: translate(-50%, calc(-100% + 6px));
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  animation: chipIn .8s cubic-bezier(.22,.61,.36,1) forwards;
+  outline: none;
+  z-index: 1;
+}
+/* Lift the hovered chip above its siblings so the 3x-scaled pill never
+   sits underneath an adjacent chip. */
+.chip:hover,
+.chip.is-hovered { z-index: 5; }
+@keyframes chipIn {
+  from { opacity: 0; transform: translate(-50%, calc(-100% + 18px)); }
+  to   { opacity: 1; transform: translate(-50%, calc(-100% + 6px));  }
+}
+.chip-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px 16px 20px;
+  /* Inverted from the surrounding theme: dark pill on light bg, light
+     pill on dark bg. Same legibility rule both ways — chips read as
+     crisp, high-contrast tags. Distinction between layers comes from
+     the dashed orbits + tone-coloured dot glow, NOT the pill itself.
+     --chip-bg / --chip-fg are swapped under [data-theme="dark"] below. */
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-bg);
+  border-radius: var(--r-pill);
+  box-shadow: var(--e2);
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--chip-fg);
+  white-space: nowrap;
+  /* Anchor the hover scale to the BOTTOM of the pill so it grows
+     upward (away from the orbit dot) without covering the stem. */
+  transform-origin: 50% 100%;
+  transition: transform .25s cubic-bezier(.22,.61,.36,1),
+              box-shadow .25s ease,
+              border-color .25s ease;
+}
+.chip-pill > svg { color: var(--chip-fg); flex-shrink: 0; }
+.chip-stem {
+  width: 1px;
+  height: 14px;
+  background: var(--chip-bg);
+  opacity: 0.55;
+}
+.chip-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  /* Inverted dot to match the inverted pill: pill-bg fill with a thin
+     pill-fg ring + a tone-coloured soft glow that ties it to its orbit. */
+  background: var(--chip-bg);
+  box-shadow: 0 0 0 2px var(--chip-fg),
+              0 0 12px color-mix(in srgb, currentColor 70%, transparent);
+}
+.chip:focus-visible .chip-pill {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+.chip:hover .chip-pill,
+.chip.is-hovered .chip-pill {
+  transform: translateY(-3px) scale(1.5);
+  box-shadow: var(--e4);
+  border-color: var(--chip-bg);
+}
+.chip:hover .chip-dot,
+.chip.is-hovered .chip-dot {
+  box-shadow: 0 0 0 2px var(--chip-fg),
+              0 0 18px color-mix(in srgb, currentColor 95%, transparent);
+}
+
+
+/* ── Zoom scene ──────────────────────────────────────────────────── */
+/* Flex column layout — header / body / ctas flow naturally, so the
+   page never overlaps regardless of viewport or title length. The
+   return pill stays absolute at the corner. */
+.zoom-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  /* Top inset pushes the title comfortably below the Return / theme-
+     toggle buttons. Bottom inset clears the fixed CTAs. Sides match
+     page-pad-x. */
+  padding: calc(var(--page-pad-y) + 144px) var(--page-pad-x) calc(var(--page-pad-y) + 64px);
+  /* Breathing room between header (title + lede) and the card row.
+     Bumped from clamp(16-32) so the two zones don't crowd each other. */
+  gap: clamp(40px, 5vh, 80px);
+  /* Allow vertical scroll only when cards genuinely exceed the viewport. */
+  overflow: hidden auto;
+  transition: opacity .5s cubic-bezier(.4,0,.2,1), transform .5s cubic-bezier(.4,0,.2,1);
+}
+.zoom-scene.is-hidden  { opacity: 0; transform: scale(0.97); pointer-events: none; }
+.zoom-scene.is-visible { opacity: 1; transform: scale(1); }
+
+/* Return pill + CTAs are position:fixed so they escape the zoom-scene's
+   opacity transition. Hide/show them by watching data-view on the root. */
+.concept-orbit:not([data-view="zoom"]) .return-pill,
+.concept-orbit:not([data-view="zoom"]) .zoom-ctas {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+.concept-orbit[data-view="zoom"] .return-pill,
+.concept-orbit[data-view="zoom"] .zoom-ctas {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity .4s ease .2s;
+}
+
+/* Tone-tinted radial glow anchored to the viewport's BOTTOM-RIGHT
+   corner. Larger radius (110vmin) so the gradient sweeps further into
+   the scene, giving the internal screen a bolder corner-wash. */
+.zoom-globe {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle 110vmin at 100% 100%,
+      color-mix(in srgb, currentColor 14%, transparent) 0%,
+      color-mix(in srgb, currentColor 5%, transparent) 38%,
+      transparent 72%);
+  pointer-events: none;
+}
+.concept-orbit[data-theme="dark"] .zoom-globe {
+  background:
+    radial-gradient(circle 110vmin at 100% 100%,
+      color-mix(in srgb, currentColor 28%, transparent) 0%,
+      color-mix(in srgb, currentColor 9%, transparent) 38%,
+      transparent 72%);
+  /* Removed mix-blend-mode: screen — combined with rotating orbits +
+     animated globe under it, it triggered constant relayer/repaint in
+     Chrome. The slightly bumped color-mix above compensates so the
+     wash still reads bright enough in dark mode. */
+}
+
+/* Oversized dashed ring — rendered OUTSIDE the zoom-scene so its huge
+   size doesn't contribute to that container's scrollable area. Fixed
+   to the viewport, sits behind the zoom-scene (z-index < 3). */
+.zoom-mega-orbit {
+  position: fixed;
+  left: calc(100vw - 110vmin);
+  top:  calc(50vh - 110vmin);
+  width:  220vmin;
+  height: 220vmin;
+  /* Let the thick stroke paint past the SVG's own bounding box. Without
+     this, an <svg>'s default overflow:hidden clips the outer half of a
+     very wide stroke (640px here). */
+  overflow: visible;
+  pointer-events: none;
+  /* Below the zoom-scene content but above the idle-scene. Zoom-scene's
+     background is transparent so this shows through behind the cards. */
+  z-index: 2;
+  opacity: 0;
+  transition: opacity .5s cubic-bezier(.4,0,.2,1);
+}
+.zoom-mega-orbit.is-visible {
+  animation: megaOrbitIn .9s cubic-bezier(.22,.61,.36,1) .15s forwards;
+}
+.zoom-mega-orbit.is-hidden { opacity: 0; }
+.zoom-mega-orbit circle {
+  fill: none;
+  stroke: currentColor;
+  /* viewBox units, same reasoning as .orbit-ring above (no non-scaling
+     so rotation can use a cached layer). 64 units ≈ 640px at vmin=1000. */
+  stroke-width: 64;
+  stroke-dasharray: 0.2 0.4;
+  stroke-linecap: butt;
+  opacity: 0.4;
+  transform-origin: 0 0;
+  will-change: transform;
+  animation: orbitSpin 360s linear infinite;
+}
+/* No drop-shadow on the rotating mega-orbit either — same reason as
+   .orbit-ring above. The opacity + tone-colour already carry the depth. */
+@keyframes megaOrbitIn {
+  from { opacity: 0; transform: scale(.55); transform-origin: 100% 50%; }
+  to   { opacity: 1; transform: scale(1);   transform-origin: 100% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zoom-mega-orbit { animation: megaOrbitIn .4s ease forwards; }
+  .zoom-mega-orbit circle { animation: none; }
+}
+
+.zoom-ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Ambient bloom anchored to bottom-right, larger ellipse so the
+     wash carries across more of the screen behind the cards. */
+  background: radial-gradient(ellipse 95% 85% at 100% 100%,
+    color-mix(in srgb, currentColor 14%, transparent) 0%,
+    transparent 65%);
+  filter: blur(48px);
+  /* Filter:blur(48px) is expensive — hint Chrome to keep this on its
+     own composited layer instead of recomputing the blur each frame. */
+  will-change: opacity;
+  animation: ambientIn .8s ease both;
+}
+.concept-orbit[data-theme="dark"] .zoom-ambient {
+  background: radial-gradient(ellipse 95% 85% at 100% 100%,
+    color-mix(in srgb, currentColor 30%, transparent) 0%,
+    transparent 65%);
+  /* Removed mix-blend-mode: screen for the same reason as .zoom-globe.
+     Bumped the colour-mix slightly so the bloom still reads in dark. */
+}
+@keyframes ambientIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Return pill — fixed so it stays visible even if the zoom-scene
+   ever overflows on very small viewports. */
+.return-pill {
+  position: fixed;
+  top: var(--page-pad-y);
+  left: var(--page-pad-x);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px 16px 20px;
+  background: var(--s0);
+  border: 1px solid var(--b-lo);
+  border-radius: var(--r-pill);
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: var(--t-hi);
+  cursor: pointer;
+  box-shadow: var(--e2);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.return-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--e3);
+  border-color: var(--b-med);
+}
+
+/* Header — title + lede stacked, centered band at the top. */
+.zoom-header {
+  width: 100%;
+  flex-shrink: 0;
+  text-align: center;
+  animation: fadeSlideUp .55s ease both .15s;
+}
+.zoom-title {
+  margin: 0;
+  font-family: var(--f-title);
+  font-weight: 700;
+  /* 1.25× of the previous (28→35, 3vw→3.75vw, 56→70). Still keeps
+     the longest title on one line at desktop sizes. */
+  font-size: clamp(36px, 3.75vw, 72px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--t-hi);
+  text-wrap: balance;
+}
+.zoom-subtitle {
+  margin: 12px 0 0;
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 24px;
+  color: var(--t-hi);
+}
+.zoom-lede {
+  /* Margin auto centres the constrained-width paragraph under the
+     centred title above it. */
+  margin: clamp(16px, 1.8vh, 24px) auto 0;
+  font-family: var(--f-body);
+  /* 1.25× bumped — 19px at 1024, 22px at 1920. */
+  font-size: clamp(19px, 1.2vw, 22px);
+  line-height: 1.6;
+  color: var(--t-med);
+  max-width: min(900px, 75%);
+}
+
+/* Body — sits directly below the header without flex-growing to fill
+   leftover space. align-items: flex-start (default) lets the cards
+   start right after the gap, keeping them visually close to the title
+   rather than being pushed to the vertical middle of the remaining
+   container. The bottom inset on .zoom-scene leaves room for the CTAs. */
+.zoom-body {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+}
+.zoom-cards {
+  width: 100%;
+  max-width: min(1280px, 80%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 1.6vw, 24px);
+}
+
+/* Cards — follow §10 Card pattern from the design system.
+   Rendered as <button> so they're inherently focusable + clickable
+   with a single keypress. */
+.z-card {
+  appearance: none;
+  background: var(--s0);
+  border: 1px solid var(--b-lo);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  opacity: 0;
+  transform: translateY(14px);
+  animation: cardIn .55s cubic-bezier(.22,.61,.36,1) both;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+@keyframes cardIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+.z-card:hover {
+  border-color: var(--tone-color, var(--b-med));
+  box-shadow: var(--e4), 0 0 0 1px color-mix(in srgb, var(--tone-color, currentColor) 25%, transparent);
+  transform: translateY(-3px);
+}
+.z-card:focus-visible {
+  outline: 2px solid var(--tone-color, var(--brand));
+  outline-offset: 3px;
+}
+
+/* Blueprint-style wireframe thumbnail — painted via currentColor so
+   it inherits the active layer's tone. */
+.z-card-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 2;
+  /* Same surface as the card body — they read as one continuous panel. */
+  background: color-mix(in srgb, currentColor 6%, var(--s0));
+}
+.concept-orbit[data-theme="dark"] .z-card-thumb {
+  background: color-mix(in srgb, currentColor 10%, var(--s0));
+}
+.z-card-body {
+  padding: 28px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.z-card-kicker {
+  margin: 0 0 4px;
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  color: var(--t-lo);
+}
+.z-card-title {
+  margin: 0;
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  color: var(--t-hi);
+}
+.z-card-desc {
+  margin: 4px 0 0;
+  font-family: var(--f-body);
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--t-med);
+}
+.z-card-accent {
+  margin: 16px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--tone-color);
+}
+.z-card-arrow {
+  transition: transform .25s ease;
+}
+.z-card:hover .z-card-arrow {
+  transform: translateX(3px);
+}
+
+/* CTAs — fixed bottom-CENTER, mirroring the centered header.
+   Centred via left:0 + right:0 + margin:auto + width:max-content so
+   the centring survives the fadeSlideUp animation, which writes to
+   `transform` (a transform-based centring would get overridden). */
+.zoom-ctas {
+  position: fixed;
+  bottom: var(--page-pad-y);
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: max-content;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  animation: fadeSlideUp .55s ease both .35s;
+}
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 28px;
+  border-radius: var(--r-pill);
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+}
+.cta-secondary {
+  background: transparent;
+  border: 1px solid var(--b-med);
+  color: var(--t-hi);
+}
+.cta-secondary:hover {
+  border-color: var(--b-hi);
+  background: var(--s1);
+  transform: translateY(-1px);
+}
+.cta-primary {
+  background: var(--s-hi);
+  border: 1px solid var(--s-hi);
+  color: var(--s0);
+  box-shadow: var(--e2);
+}
+.cta-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--e3);
+}
+.concept-orbit[data-theme="dark"] .cta-primary {
+  background: var(--s-hi);
+  color: #0C0C12;
+}
+
+/* ── Theme toggle (segmented sun/moon switch) ────────────────────── */
+.theme-toggle {
+  position: absolute;
+  top: var(--page-pad-y);
+  right: var(--page-pad-x);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  background: var(--s1);
+  border: 1px solid var(--b-base);
+  border-radius: var(--r-pill);
+}
+.theme-seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  color: var(--t-lo);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.theme-seg:hover { color: var(--t-hi); }
+.theme-seg.is-active {
+  background: var(--s0);
+  border-color: var(--b-lo);
+  color: var(--t-hi);
+  box-shadow: 0 2px 4px -2px rgba(17,12,34,0.12);
+}
+.theme-seg:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+/* The orbits' chip column compresses via JS orbitScale below 1500px,
+   but the hero column also needs to keep clear. 50vw - 42vmin already
+   does that down to ~900px, so no separate desktop override is needed
+   here — the ≤840px stacked rule below takes over for tablet/mobile. */
+
+/* Stack the lorem column above the cards as soon as the cards would
+   start to squeeze below ~180px each. Keep the same 80px left edge
+   as the Return pill, title and zoom-header so everything aligns. */
+
+@media (max-width: 900px) {
+  .zoom-scene { padding: 96px 32px; }
+  .zoom-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Horizontal carousel kicks in when the cards would NOT fit vertically
+   alongside the header + fixed CTAs. Two triggers:
+   - Narrow width (≤680px) — phones in portrait
+   - Short height (≤720px) AND mid width (≤1100px) — split-screen
+     windows, tablet landscape, short laptops where 2-column stacking
+     would push cards past the fixed bottom CTAs.
+   In either case we swap the cards from a grid into a horizontal
+   scroll-snap row, so everything stays on one viewport and the fixed
+   buttons stay clearly anchored. */
+@media (max-width: 680px),
+       (max-height: 720px) and (max-width: 1100px) {
+  .zoom-body {
+    /* Let the carousel use the full viewport width so cards can
+       peek past the scene's side padding. */
+    margin-left: calc(var(--page-pad-x) * -1);
+    margin-right: calc(var(--page-pad-x) * -1);
+    width: 100vw;
+  }
+  .zoom-cards {
+    max-width: 100%;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--page-pad-x);
+    padding-inline: var(--page-pad-x);
+    gap: 16px;
+    /* Hide scrollbar — the peek of card #2 is the affordance. */
+    scrollbar-width: none;
+  }
+  .zoom-cards::-webkit-scrollbar { display: none; }
+  .z-card {
+    flex: 0 0 min(360px, 78%);
+    scroll-snap-align: start;
+  }
+}
+
+/* Stacked mode — globe drops to the bottom-centre on tablet/mobile.
+   Figma shows this layout at ≤840: text block at top, globe arc at bottom.
+   --globe-cy: 110dvh pushes the globe centre BELOW the viewport so only
+   the top arc of the sphere is visible — leaves much more space above
+   for hero text + orbit chips + body copy. */
+@media (max-width: 840px) {
+  .concept-orbit {
+    --globe-cx: 50vw;
+    --globe-cy: 110dvh;
+    --globe-r: 55vmin;
+  }
+  .left-content {
+    top: clamp(24px, 4vh, 56px);
+    left: clamp(16px, 4vw, 40px);
+    right: clamp(16px, 4vw, 40px);
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+  .left-content.is-hidden { transform: translateY(-8px); }
+  .heading { margin-top: 40px; font-size: clamp(36px, 7.5vw, 60px); }
+  .body { max-width: none; font-size: 20px; }
+  .idle-vignette {
+    /* Top-to-bottom fade so text is readable above the globe. */
+    background: linear-gradient(180deg,
+      var(--s0) 0%,
+      color-mix(in srgb, var(--s0) 70%, transparent) 30%,
+      transparent 52%);
+  }
+  .chip-pill { font-size: 13px; padding: 8px 14px 8px 12px; }
+}
