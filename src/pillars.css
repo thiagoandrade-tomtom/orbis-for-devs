@@ -21,6 +21,30 @@
   isolation: isolate;
 }
 
+/* Globe stage (maps + canvas + tooltips). Hidden until the first map is
+   fitted and painted and the fonts have settled, then eased in, so the
+   sphere never pops from its zoom-0 size or shifts with a font swap. */
+.pillars-stage {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(16px) scale(.985);
+  transform-origin: 50% 70%;
+  transition: opacity .9s ease, transform 1.1s cubic-bezier(.2,.7,.2,1);
+}
+.pillars-stage.is-ready { opacity: 1; transform: none; }
+
+/* Header and cards arrive just ahead of the globe. */
+@keyframes pillarsRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.pillars-head { animation: pillarsRise .7s cubic-bezier(.2,.7,.2,1) both; }
+.pillars-row  { animation: pillarsRise .7s cubic-bezier(.2,.7,.2,1) .12s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pillars-stage, .pillars-stage.is-ready { transform: none; transition: opacity .3s linear; }
+  .pillars-head, .pillars-row { animation: none; }
+  .pillars-map { transition-duration: .2s; }
+}
+
 /* One MapLibre container per pillar style, cross-faded. Scoped under
    .pillars so it beats maplibre-gl.css's `.maplibregl-map { position:
    relative }`, which loads after this file and would put the maps in

@@ -277,15 +277,60 @@ export default function PillarsBanner() {
   const activeRef = useRef(active);
   useEffect(() => { activeRef.current = active; }, [active]);
 
-  // Idle auto-cycle so the banner tells the whole story on its own (and
-  // on touch devices, where there's no hover). Stops once someone engages.
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // Reveal gate: the globe stage stays hidden until the fonts have settled
+  // (so the header can't reflow and shift the globe) and the first map is
+  // fitted and painted (so its sphere never pops from zoom 0 to size).
+  const [ready, setReady] = useState(false);
+  const [mapPainted, setMapPainted] = useState(!TOMTOM_API_KEY);
+  const [fontsReady, setFontsReady] = useState(false);
   useEffect(() => {
-    if (interacted) return;
+    let live = true;
+    if (document.fonts) document.fonts.ready.then(() => live && setFontsReady(true));
+    else setFontsReady(true);
+    // Never hold the banner hostage to a slow network.
+    const t = window.setTimeout(() => live && setReady(true), 6000);
+    return () => { live = false; window.clearTimeout(t); };
+  }, []);
+  useEffect(() => { if (fontsReady && mapPainted) setReady(true); }, [fontsReady, mapPainted]);
+
+  // Respect reduced motion: no spin, no shimmer, no auto-cycle.
+  const reducedRef = useRef(false);
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const on = () => { reducedRef.current = mq.matches; setReduced(mq.matches); };
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+
+  // Only animate while the banner is on screen and the tab is visible.
+  const visibleRef = useRef(true);
+  const [onScreen, setOnScreen] = useState(true);
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const sync = (v: boolean) => { visibleRef.current = v && !document.hidden; setOnScreen(visibleRef.current); };
+    let inView = true;
+    const io = new IntersectionObserver(([e]) => { inView = e.isIntersecting; sync(inView); });
+    io.observe(el);
+    const onVis = () => sync(inView);
+    document.addEventListener("visibilitychange", onVis);
+    return () => { io.disconnect(); document.removeEventListener("visibilitychange", onVis); };
+  }, []);
+
+  // Idle auto-cycle so the banner tells the whole story on its own (and
+  // on touch devices, where there's no hover). Starts once the globe is
+  // revealed, pauses off screen, stops once someone engages.
+  const cycling = ready && onScreen && !interacted && !reduced;
+  useEffect(() => {
+    if (!cycling) return;
     const id = window.setInterval(() => setActive((a) => (a + 1) % PILLARS.length), CYCLE_MS);
     return () => window.clearInterval(id);
-  }, [interacted]);
+  }, [cycling]);
 
-  const sectionRef = useRef<HTMLElement>(null);
   const [geo, setGeo] = useState<Geo | null>(null);
   const rotRef = useRef(-12); // start with Europe facing the viewer
   // Loaded MapLibre instances, shared so the overlay can project with
@@ -313,9 +358,11 @@ export default function PillarsBanner() {
       data-mode={PILLARS[active].mode}
       aria-label="TomTom for developers"
     >
-      {geo && <PillarGlobes geo={geo} active={active} rotRef={rotRef} mapsRef={mapsRef} />}
-      {geo && <PillarOverlay geo={geo} activeRef={activeRef} rotRef={rotRef} mapsRef={mapsRef} />}
-      {geo && <PillarTips geo={geo} />}
+      <div className={`pillars-stage${ready ? " is-ready" : ""}`}>
+        {geo && <PillarGlobes geo={geo} active={active} rotRef={rotRef} mapsRef={mapsRef} onPainted={() => setMapPainted(true)} />}
+        {geo && <PillarOverlay geo={geo} activeRef={activeRef} rotRef={rotRef} mapsRef={mapsRef} visibleRef={visibleRef} reducedRef={reducedRef} />}
+        {geo && <PillarTips geo={geo} />}
+      </div>
 
       <header className="pillars-head">
         <h2 className="pillars-title">One map. Every layer.</h2>
@@ -343,7 +390,7 @@ export default function PillarsBanner() {
             <span className="pillar-title">{p.title}</span>
             <span className="pillar-desc">{p.description}</span>
             <span className="pillar-cta">{p.cta}<Arrow /></span>
-            {!interacted && i === active && (
+            {cycling && i === active && (
               <span key={active} className="pillar-progress" style={{ animationDuration: `${CYCLE_MS}ms` }} />
             )}
           </button>
@@ -401,12 +448,16 @@ const zoomAt = (m: any, lat: number) => m.__z0 + Math.log2(Math.cos((lat * Math.
    a style swap reloads every tile and flashes, which kills the hover.
    Stacking costs three GL contexts but makes the switch an opacity
    transition. The camera is driven by the overlay's RAF. */
-function PillarGlobes({ geo, active, rotRef, mapsRef }: {
+function PillarGlobes({ geo, active, rotRef, mapsRef, onPainted }: {
   geo: Geo;
   active: number;
   rotRef: React.MutableRefObject<number>;
   mapsRef: React.MutableRefObject<any[]>;
+  /** First map fitted and its first frame of tiles rendered. */
+  onPainted: () => void;
 }) {
+  const onPaintedRef = useRef(onPainted);
+  onPaintedRef.current = onPainted;
   const refs = useRef<(HTMLDivElement | null)[]>([]);
   const all = useRef<any[]>([]);
   const geoRef = useRef(geo);
@@ -479,6 +530,8 @@ function PillarGlobes({ geo, active, rotRef, mapsRef }: {
         // Dev-only handle for checking the sphere fit from the console.
         if ((import.meta as any).env?.DEV) (window as any).__pillarsMaps = mapsRef.current;
         if (p.mode === "build") addStudio(m).catch(() => {});
+        // The banner opens on the first pillar: reveal once it has painted.
+        if (i === 0) m.once("idle", () => onPaintedRef.current());
       });
       m?.on?.("styledata", () => chrome(m, p.labels));
     });
@@ -602,11 +655,13 @@ function PillarGlobes({ geo, active, rotRef, mapsRef }: {
 }
 
 /* ─── Canvas overlay — the granularity story ─────────────────────── */
-function PillarOverlay({ geo, activeRef, rotRef, mapsRef }: {
+function PillarOverlay({ geo, activeRef, rotRef, mapsRef, visibleRef, reducedRef }: {
   geo: Geo;
   activeRef: React.MutableRefObject<number>;
   rotRef: React.MutableRefObject<number>;
   mapsRef: React.MutableRefObject<any[]>;
+  visibleRef: React.MutableRefObject<boolean>;
+  reducedRef: React.MutableRefObject<boolean>;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const geoRef = useRef(geo);
@@ -628,21 +683,25 @@ function PillarOverlay({ geo, activeRef, rotRef, mapsRef }: {
     // Per-mode visibility weights, eased toward the active pillar.
     const w: Record<Mode, number> = { data: 1, intel: 0, build: 0 };
     let raf = 0, last = 0, lat0 = SPIN_LAT;
-    const section = canvas.parentElement!;
+    const section = canvas.closest(".pillars")!;
     const tipEls = () => Array.from(section.querySelectorAll<HTMLElement>(".pillars-tip"));
     const lensEl = () => section.querySelector<HTMLElement>(".pillars-lens");
 
     const tick = (ts: number) => {
+      // Off screen or hidden tab: keep the loop alive but do no work, so
+      // four GL maps and the canvas cost nothing while out of view.
+      if (!visibleRef.current) { last = 0; raf = requestAnimationFrame(tick); return; }
       const dt = last ? Math.min(ts - last, 64) : 16;
       last = ts;
       const target = MODES[activeRef.current];
+      const still = reducedRef.current;
 
       // Camera: free spin for Data; Intelligence and Studio ease onto
       // their region and hold there so the content stays readable.
       const park = PARK[target];
       const ease = 1 - Math.exp(-dt / 500);
       if (park) rotRef.current += angDiff(rotRef.current, park.rot) * ease;
-      else rotRef.current = (rotRef.current + dt * ROT_SPEED) % 360;
+      else if (!still) rotRef.current = (rotRef.current + dt * ROT_SPEED) % 360;
       lat0 += ((park?.lat ?? SPIN_LAT) - lat0) * ease;
       const lon0 = rotRef.current;
       const centerLon = ((-lon0 + 540) % 360) - 180;
@@ -675,7 +734,7 @@ function PillarOverlay({ geo, activeRef, rotRef, mapsRef }: {
       }
 
       drawGrid(ctx, proj, 0.06 + w.intel * 0.22, GRID_STEP);
-      if (w.data > 0.01) drawCloud(ctx, g, proj, w.data, ts);
+      if (w.data > 0.01) drawCloud(ctx, g, proj, w.data, still ? 0 : ts);
       if (w.intel > 0.01) drawArcs(ctx, g, proj, w.intel * 0.7, ts);
       placeTips(ctx, g, proj, w, tipEls(), lensEl());
 
