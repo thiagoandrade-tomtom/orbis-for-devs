@@ -1,0 +1,278 @@
+/* ── Pillars banner (layout 3: centred globe over three cards) ───── */
+.pillars {
+  --bg: #0C0C12;
+  --t-hi: #FFFFFF;
+  --t-med: rgba(255,255,255,.72);
+  --t-low: rgba(255,255,255,.48);
+  --line: rgba(255,255,255,.12);
+  /* Single accent for every state — matches the globe overlays. */
+  --accent: rgb(125,190,255);
+  position: relative;
+  width: 100%;
+  /* The globe is fitted to whatever room is left between header and
+     cards, so the section can flex with the viewport. */
+  height: clamp(720px, 100dvh, 960px);
+  /* clip, not hidden: the map containers overhang the bottom edge, and
+     a hidden box still scrolls itself when a card takes focus. */
+  overflow: clip;
+  background: var(--bg);
+  color: var(--t-hi);
+  font-family: var(--f-body);
+  isolation: isolate;
+}
+
+/* One MapLibre container per pillar style, cross-faded. Scoped under
+   .pillars so it beats maplibre-gl.css's `.maplibregl-map { position:
+   relative }`, which loads after this file and would put the maps in
+   flow (pushing the header down and skewing the globe fit). */
+.pillars .pillars-map {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .7s ease;
+}
+.pillars-map.is-active { opacity: 1; }
+/* Encode reads as raw, like a blueprint: the mono style is greyed, then
+   toned navy (sepia + hue-rotate) with contrast high enough that
+   coastlines and borders stay legible under the point cloud. */
+.pillars-map--data.is-active  { opacity: 1; filter: grayscale(1) sepia(1) hue-rotate(182deg) saturate(1.5) brightness(1.2) contrast(1.4); }
+/* Ground: satellite detail, dimmed so the service calls stay on top. */
+.pillars-map--intel.is-active { opacity: 1; filter: brightness(.75) saturate(.9); }
+
+.pillars-map--build.is-active { opacity: 1; }
+.pillars-map .maplibregl-control-container { display: none !important; }
+.pillars-map .maplibregl-canvas { outline: none; }
+
+.pillars-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+.pillars-head {
+  position: relative;
+  z-index: 3;
+  padding: var(--page-pad-y) var(--page-pad-x) 0;
+  text-align: center;
+}
+.pillars-title {
+  margin: 0 0 12px;
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: clamp(32px, 3.6vw, 60px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+.pillars-sub {
+  margin: 0 auto;
+  max-width: 560px;
+  font-size: clamp(15px, 1vw, 18px);
+  line-height: 1.55;
+  color: var(--t-med);
+}
+
+/* ── Cards ───────────────────────────────────────────────────────── */
+.pillars-cols {
+  position: absolute;
+  z-index: 3;
+  left: 0; right: 0; bottom: 0;
+  padding: 96px var(--page-pad-x) var(--page-pad-y);
+  /* The globe sinks behind the cards into the page colour. */
+  background: linear-gradient(to bottom, rgba(12,12,18,0) 0%, rgba(12,12,18,.85) 30%, var(--bg) 50%);
+}
+
+/* Raw → ready scale. */
+.pillars-scale {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 8px 20px;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--t-low);
+}
+.pillars-scale-line { flex: 1; height: 1px; border-radius: var(--r-pill); background: var(--accent); opacity: .5; }
+
+.pillars-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.pillar {
+  all: unset;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 24px 20px;
+  border-radius: var(--r-lg);
+  background: rgba(255,255,255,.035);
+  box-shadow: inset 0 0 0 1px var(--line);
+  overflow: hidden;
+  cursor: pointer;
+  color: var(--t-med);
+  transition: background .3s ease, box-shadow .3s ease, color .3s ease;
+}
+.pillar:hover { background: rgba(255,255,255,.05); }
+.pillar:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.pillar.is-active {
+  color: var(--t-hi);
+  background: rgba(255,255,255,.07);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.28);
+}
+
+/* Idle auto-cycle progress: rides on the card's bottom border, over the
+   straight run between the two rounded corners, so it reads as the
+   frame filling up rather than a bar floating in the padding. */
+.pillar-progress {
+  position: absolute;
+  left: var(--r-lg); right: var(--r-lg); bottom: 0;
+  height: 2px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transform-origin: left;
+  animation: pillarProgress linear both;
+}
+@keyframes pillarProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.pillar-kicker {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--t-low);
+  transition: color .3s ease;
+}
+.pillar.is-active .pillar-kicker { color: var(--accent); }
+.pillar-title {
+  font-family: var(--f-title);
+  font-weight: 700;
+  font-size: clamp(22px, 1.8vw, 32px);
+  line-height: 1.1;
+  color: var(--t-hi);
+  opacity: .7;
+  transition: opacity .3s ease;
+}
+.pillar.is-active .pillar-title { opacity: 1; }
+.pillar-desc { margin-bottom: 14px; font-size: clamp(14px, .9vw, 16px); line-height: 1.5; max-width: 34ch; }
+
+/* CTA as a pill button with the house arrow. */
+.pillar-cta {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  /* Pinned to the bottom so all three cards line up at equal height. */
+  margin-top: auto;
+  padding: 9px 16px;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,.08);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--t-hi);
+  transition: background .3s ease, color .3s ease;
+}
+.pillar.is-active .pillar-cta { background: var(--t-hi); color: var(--bg); }
+.pillar-arrow { transition: transform .25s ease; }
+.pillar.is-active:hover .pillar-arrow { transform: translateX(3px); }
+
+/* ── Studio: map-anchored markers and cards ──────────────────────── */
+.studio-stop {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--bg, #0C0C12);
+  box-shadow: 0 0 0 2.5px rgb(125,190,255);
+}
+.studio-stop.is-end { background: rgb(125,190,255); box-shadow: 0 0 0 3px rgba(12,12,18,.8); }
+.studio-charger {
+  display: grid; place-items: center;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(12,12,18,.75);
+}
+.studio-charger svg { width: 9px; height: 9px; fill: #0C0C12; }
+
+/* ── Tooltips: one component for every pillar ────────────────────── */
+/* Own layer above the canvas (leaders, glow) and below the header and
+   cards, so nothing on the globe ever paints over them. */
+.pillars-tips {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.pillars-tip {
+  position: absolute;
+  top: 0; left: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 240px;
+  padding: 10px 14px 11px 10px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.96);
+  color: #0C0C12;
+  box-shadow: 0 10px 28px -10px rgba(0,0,0,.55);
+  font-family: var(--f-body);
+  will-change: transform, opacity;
+}
+.tip-icon {
+  flex: none;
+  display: grid; place-items: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #0C0C12;
+  color: rgb(125,190,255);
+}
+.tip-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tip-kicker {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #4A6A93;
+}
+.tip-title { font-family: var(--f-title); font-size: 14px; line-height: 1.25; }
+.tip-line { font-size: 12px; line-height: 1.35; color: #4A5260; }
+
+/* Street-level traffic lens over the Intelligence globe. */
+.pillars-lens {
+  position: absolute;
+  top: 0; left: 0;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #0C0C12;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 6px rgba(125,190,255,.25), 0 18px 40px -12px rgba(0,0,0,.7);
+  will-change: transform, opacity;
+}
+/* Scoped like .pillars-map so it beats maplibre-gl.css's position: relative. */
+.pillars-lens .pillars-lens-map { position: absolute; inset: 0; filter: brightness(.8) saturate(.9); }
+.pillars-lens .maplibregl-control-container { display: none !important; }
+
+/* ── Narrow: stacked cards — only the active one opens ───────────── */
+@media (max-width: 720px) {
+  .pillars { height: 100dvh; min-height: 760px; }
+  .pillars-head { padding: 40px 16px 0; }
+  .pillars-cols { padding: 72px 16px 20px; }
+  .pillars-scale { display: none; }
+  .pillars-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .pillar { padding: 16px 18px; gap: 6px; border-radius: 16px; }
+  .pillar-title { font-size: 20px; }
+  .pillar-kicker { font-size: 11px; }
+  .pillar-desc, .pillar-cta { display: none; }
+  .pillar.is-active .pillar-desc { display: block; }
+  .pillar.is-active .pillar-cta { display: inline-flex; }
+  .pillar-progress { left: 16px; right: 16px; }
+  /* Tooltips shrink so they stay inside a phone-width globe. */
+  .pillars-tip { max-width: 150px; padding: 8px 10px 9px 8px; gap: 8px; border-radius: 14px; }
+  .tip-icon { width: 22px; height: 22px; }
+  .tip-title { font-size: 12px; }
+  .tip-line { font-size: 11px; }
+}
